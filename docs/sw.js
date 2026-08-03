@@ -1,4 +1,4 @@
-const CACHE = "ledger-calendar-v1";
+const CACHE = "koyomi-calendar-v2";
 const ASSETS = [
   "./",
   "./index.html",

@@ -1,13 +1,13 @@
 {
-  "name": "달력 — Ledger Calendar",
-  "short_name": "달력",
-  "description": "안드로이드와 윈도우에서 함께 쓰는 개인 달력",
+  "name": "Koyomi — 나의 시간과 리듬",
+  "short_name": "Koyomi",
+  "description": "기기 사이에서 조용히 동기화되는 미니멀 개인 캘린더",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#FAFAF7",
-  "theme_color": "#3E6990",
+  "background_color": "#F3F1EC",
+  "theme_color": "#315F5B",
   "lang": "ko",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
