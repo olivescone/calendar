@@ -14,21 +14,43 @@
 <meta name="apple-mobile-web-app-title" content="Calendar" />
 <style>
   :root{
-    --bg:#FFFFFF;
-    --bg-hover:#F1F1EF;
-    --bg-hover-strong:#E9E9E7;
-    --text:#37352F;
-    --text-secondary:#9B9A97;
-    --border:#E9E9E7;
-    --border-strong:#D3D1CB;
-    --accent:#2383E2;
-    --accent-bg:#E7F3F8;
-    --radius:6px;
-    --radius-lg:10px;
+    --bg:#FAFAF7;
+    --bg-hover:#F1F0EB;
+    --bg-hover-strong:#E7E5DD;
+    --text:#2B2A28;
+    --text-secondary:#8C8A82;
+    --border:#EAE8E1;
+    --border-strong:#D6D3C9;
+    --accent:#3E6990;
+    --accent-bg:#EAF1F5;
+    --sun:#BE5548;
+    --sat:#3E6990;
+    --on-strong:#FFFFFF;
+    --radius:7px;
+    --radius-lg:12px;
     --row-h:46px;
-    --shadow: 0 1px 2px rgba(15,15,15,.06), 0 4px 12px rgba(15,15,15,.06);
+    --shadow: 0 1px 2px rgba(43,42,40,.05), 0 6px 20px rgba(43,42,40,.06);
+    --ease: cubic-bezier(.32,.72,0,1);
+    color-scheme: light;
     font-size:16px;
   }
+  body.theme-dark{
+    --bg:#1B1A17;
+    --bg-hover:#242320;
+    --bg-hover-strong:#302E29;
+    --text:#EBE8E2;
+    --text-secondary:#93908A;
+    --border:#302E29;
+    --border-strong:#413E37;
+    --accent:#8FB4D1;
+    --accent-bg:#20303A;
+    --sun:#D98276;
+    --sat:#8FB4D1;
+    --on-strong:#17150F;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 28px rgba(0,0,0,.35);
+    color-scheme: dark;
+  }
+  body{ transition: background-color .25s var(--ease), color .25s var(--ease); }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   body{
@@ -45,32 +67,37 @@
   .app{max-width:1040px;margin:0 auto;padding:32px 24px 64px;}
 
   /* ---- Topbar ---- */
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin:-10px -8px 22px;padding:10px 8px;border-radius:var(--radius-lg);
+    background:color-mix(in srgb, var(--sky-color, var(--accent-bg)) 18%, var(--bg));
+    transition:background-color 3s var(--ease);
+  }
   .brand{display:flex;align-items:center;gap:9px;}
   .brand .mark{
     width:22px;height:22px;border-radius:5px;background:var(--accent);
-    display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex:none;
+    display:flex;align-items:center;justify-content:center;color:var(--on-strong);font-size:12px;font-weight:700;flex:none;
   }
   .brand h1{font-size:1.05rem;margin:0;font-weight:600;color:var(--text);}
   .toolbar{display:flex;align-items:center;gap:4px;}
   .icon-btn{
     border:none;background:transparent;color:var(--text-secondary);border-radius:var(--radius);
     height:30px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;
-    cursor:pointer;font-size:.82rem;transition:background .12s;
+    cursor:pointer;font-size:.82rem;transition:background .14s var(--ease);
   }
   .icon-btn:hover{background:var(--bg-hover);color:var(--text);}
   .btn{
     border:1px solid var(--border-strong);background:var(--bg);color:var(--text);
     padding:6px 12px;border-radius:var(--radius);font-size:.85rem;cursor:pointer;
-    transition:background .12s,border-color .12s;font-weight:500;
+    transition:background .14s var(--ease),border-color .14s var(--ease);font-weight:500;
   }
   .btn:hover{background:var(--bg-hover);}
-  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-strong);font-weight:600;}
   .btn.primary:hover{background:#1c6fc4;}
   .btn.ghost{border-color:transparent;color:var(--text-secondary);}
   .btn.ghost:hover{background:var(--bg-hover);color:var(--text);}
   .btn.small{padding:4px 9px;font-size:.78rem;}
-  .btn.active{background:var(--text);border-color:var(--text);color:#fff;}
+  .btn.active{background:var(--text);border-color:var(--text);color:var(--on-strong);}
 
   /* ---- Month/week header ---- */
   .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
@@ -79,17 +106,37 @@
   .nav-controls{display:flex;align-items:center;gap:2px;}
   .view-toggle{display:flex;gap:4px;margin-bottom:14px;}
 
+  .day-ring-card{
+    display:flex;justify-content:center;padding:14px;margin-bottom:18px;
+    border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--bg);
+    box-shadow:var(--shadow);
+  }
+  .day-ring-card svg{max-width:100%;height:auto;cursor:default;}
+  .day-ring-card .ring-event{cursor:pointer;}
+  .day-ring-card .ring-event:hover{opacity:.75;}
+
+  .clip-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--accent-bg);border:1px solid var(--accent);border-radius:var(--radius);
+    padding:8px 12px;margin-bottom:14px;font-size:.85rem;color:var(--text);
+  }
+  body.paste-mode .day:hover,
+  body.paste-mode .week-col:hover,
+  body.paste-mode .week-head-cell:hover{
+    outline:2px dashed var(--accent);outline-offset:-2px;cursor:copy;
+  }
+
   /* ---- Month grid ---- */
   .cal-frame{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
   .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);background:#FBFBFA;}
   .weekday{padding:8px 0;text-align:center;font-size:.72rem;font-weight:600;color:var(--text-secondary);letter-spacing:.03em;}
-  .weekday.sun{color:#D44C47;}
-  .weekday.sat{color:#337EA9;}
+  .weekday.sun{color:var(--sun);}
+  .weekday.sat{color:var(--sat);}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(96px,1fr);}
   .day{
     border-right:1px solid var(--border);border-bottom:1px solid var(--border);
     padding:6px 6px 4px;display:flex;flex-direction:column;gap:3px;cursor:pointer;
-    text-align:left;background:var(--bg);color:inherit;transition:background .12s;min-width:0;position:relative;
+    text-align:left;background:var(--bg);color:inherit;transition:background .14s var(--ease);min-width:0;position:relative;
   }
   .day:nth-child(7n){border-right:none;}
   .day:hover{background:var(--bg-hover);}
@@ -101,10 +148,10 @@
     font-size:.78rem;font-weight:600;color:var(--text);width:20px;height:20px;
     display:flex;align-items:center;justify-content:center;border-radius:50%;
   }
-  .day.today .num{background:var(--accent);color:#fff;}
-  .day.sun .num{color:#D44C47;}
-  .day.sat .num{color:#337EA9;}
-  .day.today.sun .num,.day.today.sat .num{color:#fff;}
+  .day.today .num{background:var(--accent);color:var(--on-strong);}
+  .day.sun .num{color:var(--sun);}
+  .day.sat .num{color:var(--sat);}
+  .day.today.sun .num,.day.today.sat .num{color:var(--on-strong);}
   .chips{display:flex;flex-direction:column;gap:2px;min-height:0;overflow:hidden;}
   .chip{font-size:.66rem;padding:1.5px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;}
   .chip.repeat{border-left:2px dashed currentColor;padding-left:4px;}
@@ -123,7 +170,7 @@
     font-size:.85rem;font-weight:700;margin-top:2px;width:24px;height:24px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;margin-left:auto;margin-right:auto;
   }
-  .week-head-cell.today .wn{background:var(--accent);color:#fff;}
+  .week-head-cell.today .wn{background:var(--accent);color:var(--on-strong);}
   .week-head-cell.selected{background:var(--accent-bg);}
 
   .allday-row{display:flex;border-bottom:1px solid var(--border);min-height:26px;}
@@ -150,6 +197,15 @@
   .event-block .r{font-size:.62rem;opacity:.85;display:block;}
   .event-block.repeat{border-left-style:dashed;}
   .event-block.done{opacity:.55;text-decoration:line-through;}
+  .event-block .block-copy-btn{
+    position:absolute;top:1px;right:1px;
+    width:16px;height:16px;border-radius:4px;border:none;
+    background:var(--bg);color:var(--text);
+    font-size:.6rem;line-height:16px;text-align:center;padding:0;cursor:pointer;
+    opacity:0;transition:opacity .14s var(--ease);
+  }
+  .event-block:hover .block-copy-btn{opacity:.92;}
+  .event-block .block-copy-btn:hover{opacity:1;}
 
   /* ---- Agenda ---- */
   .agenda{margin-top:24px;}
@@ -162,11 +218,11 @@
   .event-row .check{
     flex:none;width:17px;height:17px;border-radius:4px;border:1.5px solid var(--border-strong);
     margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-    background:var(--bg);transition:background .12s,border-color .12s;
+    background:var(--bg);transition:background .14s var(--ease),border-color .14s var(--ease);
   }
   .event-row .check:hover{border-color:var(--accent);}
   .event-row .check.checked{background:var(--accent);border-color:var(--accent);}
-  .event-row .check.checked::after{content:"";width:5px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
+  .event-row .check.checked::after{content:"";width:5px;height:8px;border:solid var(--on-strong);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
   .event-row .info{flex:1;min-width:0;}
   .event-row .title{font-weight:500;font-size:.9rem;word-break:break-word;display:flex;align-items:center;gap:5px;}
   .event-row .title.done{text-decoration:line-through;color:var(--text-secondary);}
@@ -174,11 +230,11 @@
   .event-row .meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
   .event-row .time-pill{font-size:.72rem;color:var(--text-secondary);background:var(--bg-hover);padding:1px 7px;border-radius:4px;}
   .event-row .memo{font-size:.8rem;color:var(--text-secondary);margin-top:5px;white-space:pre-wrap;}
-  .event-row .actions{display:flex;gap:2px;flex:none;opacity:0;transition:opacity .12s;flex-wrap:wrap;justify-content:flex-end;}
+  .event-row .actions{display:flex;gap:2px;flex:none;opacity:0;transition:opacity .14s var(--ease);flex-wrap:wrap;justify-content:flex-end;}
   .event-row:hover .actions{opacity:1;}
   .event-row .actions button{border:none;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:.74rem;padding:4px 6px;border-radius:var(--radius);white-space:nowrap;}
   .event-row .actions button:hover{background:var(--bg-hover);color:var(--text);}
-  .event-row .actions button.danger:hover{color:#D44C47;}
+  .event-row .actions button.danger:hover{color:var(--sun);}
   .empty-note{font-size:.85rem;color:var(--text-secondary);padding:14px 4px 8px;}
   .add-row{display:flex;align-items:center;gap:8px;padding:9px 4px;color:var(--text-secondary);cursor:pointer;font-size:.88rem;border-radius:var(--radius);}
   .add-row:hover{background:var(--bg-hover);color:var(--text);}
@@ -203,22 +259,84 @@
   .toggle input{display:none;}
   .toggle .box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;background:var(--bg);}
   .toggle input:checked + .box{background:var(--accent);border-color:var(--accent);}
-  .toggle input:checked + .box::after{content:"";width:5px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
+  .toggle input:checked + .box::after{content:"";width:5px;height:8px;border:solid var(--on-strong);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
   .dur-chip{border:1px solid var(--border-strong);background:var(--bg);border-radius:14px;padding:3px 10px;font-size:.76rem;color:var(--text-secondary);cursor:pointer;}
   .dur-chip:hover{background:var(--bg-hover);}
-  .dur-chip.active{background:var(--text);color:#fff;border-color:var(--text);}
+  .dur-chip.active{background:var(--text);color:var(--on-strong);border-color:var(--text);}
   .end-preview{font-size:.78rem;color:var(--text-secondary);}
   .color-picker{display:flex;gap:6px;flex-wrap:wrap;}
   .color-opt{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center;position:relative;}
   .color-opt.active{border-color:var(--text);}
-  .color-opt.active::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+  .color-opt.active::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--on-strong);box-shadow:0 0 0 1px rgba(0,0,0,.15);}
   .day-opt{
     width:30px;height:30px;border-radius:50%;border:1px solid var(--border-strong);background:var(--bg);
     display:flex;align-items:center;justify-content:center;font-size:.76rem;color:var(--text-secondary);cursor:pointer;
   }
   .day-opt:hover{background:var(--bg-hover);}
-  .day-opt.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .day-opt.active{background:var(--accent);border-color:var(--accent);color:var(--on-strong);font-weight:600;}
   .memo-field{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius);padding:7px 9px;font-size:.85rem;resize:vertical;min-height:52px;background:var(--bg);color:var(--text);}
+
+  /* ---- time chip + wheel picker ---- */
+  .time-chip{
+    border:1px solid var(--border-strong);background:var(--bg);color:var(--text);
+    border-radius:8px;padding:6px 12px;font-size:.85rem;font-variant-numeric:tabular-nums;
+    cursor:pointer;font-weight:500;transition:background .12s var(--ease),border-color .12s var(--ease);
+  }
+  .time-chip:hover{background:var(--bg-hover);}
+  .time-chip.active{border-color:var(--accent);background:var(--accent-bg);}
+  .time-sep{color:var(--text-secondary);font-size:.8rem;}
+
+  .time-picker-backdrop{
+    position:fixed;inset:0;background:rgba(0,0,0,0);z-index:60;
+    transition:background-color .22s var(--ease);
+  }
+  .time-picker-backdrop.open{background:rgba(20,18,15,.28);}
+  body.theme-dark .time-picker-backdrop.open{background:rgba(0,0,0,.5);}
+
+  .time-picker{
+    position:fixed;z-index:61;width:264px;
+    background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);padding:10px 10px 12px;
+    opacity:0;transform:scale(.94) translateY(-6px);transform-origin:top center;
+    transition:opacity .22s var(--ease), transform .22s var(--ease);
+  }
+  .time-picker.open{opacity:1;transform:scale(1) translateY(0);}
+
+  .tp-wheels{position:relative;display:flex;gap:4px;height:180px;}
+  .tp-col{
+    flex:1;overflow-y:auto;scroll-snap-type:y mandatory;
+    -ms-overflow-style:none;scrollbar-width:none;
+    padding:72px 0;
+  }
+  .tp-col::-webkit-scrollbar{display:none;}
+  .tp-item{
+    height:36px;line-height:36px;text-align:center;scroll-snap-align:center;
+    font-size:1.05rem;font-variant-numeric:tabular-nums;color:var(--text);
+    opacity:.32;transform:scale(.86);cursor:pointer;user-select:none;
+    transition:opacity .15s var(--ease), transform .15s var(--ease);
+  }
+  .tp-item.tp-near{opacity:.62;transform:scale(.94);}
+  .tp-item.tp-center{opacity:1;transform:scale(1);font-weight:600;}
+  .tp-ampm{
+    width:52px;display:flex;flex-direction:column;justify-content:center;gap:6px;
+    padding:0 2px;
+  }
+  .tp-ampm-btn{
+    border:1px solid var(--border-strong);background:var(--bg);color:var(--text-secondary);
+    border-radius:8px;padding:8px 4px;font-size:.74rem;font-weight:600;cursor:pointer;
+    transition:background .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease);
+  }
+  .tp-ampm-btn:active{transform:scale(.95);}
+  .tp-ampm-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-strong);}
+  .tp-center-band{
+    position:absolute;left:0;right:52px;top:50%;transform:translateY(-50%);
+    height:36px;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);
+    pointer-events:none;
+  }
+  .tp-fade{position:absolute;left:0;right:52px;height:72px;pointer-events:none;}
+  .tp-fade-top{top:0;background:linear-gradient(var(--bg), transparent);}
+  .tp-fade-bottom{bottom:0;background:linear-gradient(transparent, var(--bg));}
+  .tp-actions{display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
   .memo-field:focus{outline:2px solid var(--accent);outline-offset:-1px;}
   .form-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 2px 12px;border-top:1px solid var(--border);margin-top:4px;}
 
@@ -227,8 +345,8 @@
   .file-input{display:none;}
   .toast{
     position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(12px);
-    background:var(--text);color:#fff;padding:9px 16px;border-radius:var(--radius);font-size:.82rem;
-    opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:50;box-shadow:var(--shadow);
+    background:var(--text);color:var(--on-strong);padding:9px 16px;border-radius:var(--radius);font-size:.82rem;
+    opacity:0;pointer-events:none;transition:opacity .22s var(--ease), transform .22s var(--ease);z-index:50;box-shadow:var(--shadow);
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
@@ -255,6 +373,7 @@
       <h1>Calendar</h1>
     </div>
     <div class="toolbar">
+      <button class="icon-btn" id="themeBtn" title="테마 전환">◐</button>
       <button class="icon-btn" id="installBtn" hidden>⭳ 설치</button>
       <button class="icon-btn" id="syncBtn" title="동기화">● 동기화</button>
       <button class="icon-btn" id="exportBtn">내보내기</button>
@@ -282,6 +401,11 @@
     </div>
   </div>
 
+  <div class="clip-bar" id="clipBar" hidden>
+    <span id="clipBarText">📋 복사됨</span>
+    <button type="button" class="btn small ghost" id="clipCancelBtn">취소</button>
+  </div>
+
   <div class="month-nav">
     <div class="month-title">
       <span id="monthLabel">7월</span><small id="yearLabel">2026</small>
@@ -296,6 +420,7 @@
   <div class="view-toggle">
     <button class="btn small active" id="viewMonthBtn">월간</button>
     <button class="btn small" id="viewWeekBtn">주간</button>
+    <button class="btn small" id="viewDayBtn">일간</button>
   </div>
 
   <div class="cal-frame" id="monthFrame">
@@ -323,6 +448,10 @@
     </div>
   </div>
 
+  <div class="day-ring-card" id="dayRingCard" style="display:none;">
+    <svg id="dayRingSvg" viewBox="0 0 260 220" width="260" height="220"></svg>
+  </div>
+
   <div class="agenda" id="agenda">
     <div class="agenda-head">
       <h2 id="agendaDate">날짜를 선택하세요<span class="dow" id="agendaDow"></span></h2>
@@ -338,21 +467,12 @@
       <div class="prop-row">
         <div class="prop-label">⏰ 시간</div>
         <div class="prop-control">
-          <input type="time" id="fTime" />
+          <span id="timeChipsWrap" style="display:inline-flex;align-items:center;gap:8px;">
+            <button type="button" class="time-chip" id="fTimeChip">9:00 AM</button>
+            <span class="time-sep">–</span>
+            <button type="button" class="time-chip" id="fEndTimeChip">9:30 AM</button>
+          </span>
           <label class="toggle"><input type="checkbox" id="fAllDay" /><span class="box"></span>종일</label>
-        </div>
-      </div>
-
-      <div class="prop-row" id="durationRow">
-        <div class="prop-label">⏳ 지속 시간</div>
-        <div class="prop-control">
-          <input type="number" id="fDuration" min="5" step="5" value="30" />
-          <span style="color:var(--text-secondary);font-size:.8rem;">분</span>
-          <span class="dur-chip" data-min="15">15분</span>
-          <span class="dur-chip active" data-min="30">30분</span>
-          <span class="dur-chip" data-min="60">1시간</span>
-          <span class="dur-chip" data-min="120">2시간</span>
-          <span class="end-preview" id="endPreview"></span>
         </div>
       </div>
 
@@ -402,6 +522,25 @@
 
 </div>
 
+<div class="time-picker-backdrop" id="timePickerBackdrop" hidden></div>
+<div class="time-picker" id="timePicker" hidden>
+  <div class="tp-wheels">
+    <div class="tp-col" id="tpHourCol"></div>
+    <div class="tp-col" id="tpMinuteCol"></div>
+    <div class="tp-ampm" id="tpAmPm">
+      <button type="button" class="tp-ampm-btn" data-ap="AM">오전</button>
+      <button type="button" class="tp-ampm-btn" data-ap="PM">오후</button>
+    </div>
+    <div class="tp-center-band"></div>
+    <div class="tp-fade tp-fade-top"></div>
+    <div class="tp-fade tp-fade-bottom"></div>
+  </div>
+  <div class="tp-actions">
+    <button type="button" class="btn ghost small" id="tpCancelBtn">취소</button>
+    <button type="button" class="btn primary small" id="tpDoneBtn">완료</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -412,19 +551,50 @@
   const WEEKDAY_KO = ["일","월","화","수","목","금","토"];
   const GRID_START_H = 7, GRID_END_H = 23; // week view visible hour range
 
-  const COLORS = [
-    {key:"default", label:"기본", text:"#37352F", bg:"#F1F1EF"},
-    {key:"gray",    label:"회색", text:"#9B9A97", bg:"#F1F1EF"},
-    {key:"brown",   label:"갈색", text:"#64473A", bg:"#F4EEEE"},
-    {key:"orange",  label:"주황", text:"#D9730D", bg:"#FBECDD"},
-    {key:"yellow",  label:"노랑", text:"#DFAB01", bg:"#FBF3DB"},
-    {key:"green",   label:"초록", text:"#448361", bg:"#EDF3EC"},
-    {key:"blue",    label:"파랑", text:"#337EA9", bg:"#E7F3F8"},
-    {key:"purple",  label:"보라", text:"#9065B0", bg:"#F6F3F9"},
-    {key:"pink",    label:"분홍", text:"#C14C8A", bg:"#FAF1F5"},
-    {key:"red",     label:"빨강", text:"#D44C47", bg:"#FDEBEC"},
+  // ---- theme ----
+  const THEME_KEY = "calendar-theme"; // 'light' | 'dark'
+  function applyTheme(mode){
+    document.body.classList.toggle("theme-dark", mode === "dark");
+    const btn = document.getElementById("themeBtn");
+    if(btn) btn.textContent = mode === "dark" ? "☾" : "☀";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute("content", mode === "dark" ? "#1B1A17" : "#FFFFFF");
+  }
+  function getTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    if(saved) return saved;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  let currentTheme = getTheme();
+  applyTheme(currentTheme);
+  document.getElementById("themeBtn").addEventListener("click", ()=>{
+    currentTheme = currentTheme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, currentTheme);
+    applyTheme(currentTheme);
+    rebuildColorMap();
+    renderAll();
+  });
+
+  const COLOR_DEFS = [
+    {key:"default", label:"기본", light:{text:"#2B2A28", bg:"#F1F0EB"}, dark:{text:"#EBE8E2", bg:"#2C2A26"}},
+    {key:"gray",    label:"회색", light:{text:"#8C8A82", bg:"#F1F0EB"}, dark:{text:"#9C9990", bg:"#2C2A26"}},
+    {key:"brown",   label:"갈색", light:{text:"#6B4B3A", bg:"#F5EEEA"}, dark:{text:"#C99A82", bg:"#3A2C22"}},
+    {key:"orange",  label:"주황", light:{text:"#B96A0C", bg:"#FBEEDD"}, dark:{text:"#E8A15C", bg:"#3F2E1B"}},
+    {key:"yellow",  label:"노랑", light:{text:"#A8830A", bg:"#FBF3D9"}, dark:{text:"#DEBD5C", bg:"#3B331A"}},
+    {key:"green",   label:"초록", light:{text:"#4A7A5D", bg:"#EAF2EC"}, dark:{text:"#7FB995", bg:"#22392C"}},
+    {key:"blue",    label:"파랑", light:{text:"#3E6990", bg:"#E9F1F6"}, dark:{text:"#86AFCE", bg:"#20303C"}},
+    {key:"purple",  label:"보라", light:{text:"#7C5A96", bg:"#F3EFF6"}, dark:{text:"#B79AD1", bg:"#2E2638"}},
+    {key:"pink",    label:"분홍", light:{text:"#A8557E", bg:"#F8EEF3"}, dark:{text:"#D189AC", bg:"#3A2530"}},
+    {key:"red",     label:"빨강", light:{text:"#B8523F", bg:"#FAEBE8"}, dark:{text:"#DB8A78", bg:"#3A241F"}},
   ];
-  const colorMap = Object.fromEntries(COLORS.map(c=>[c.key,c]));
+  let COLORS = [];
+  let colorMap = {};
+  function rebuildColorMap(){
+    const mode = currentTheme === "dark" ? "dark" : "light";
+    COLORS = COLOR_DEFS.map(c => ({ key:c.key, label:c.label, text:c[mode].text, bg:c[mode].bg }));
+    colorMap = Object.fromEntries(COLORS.map(c=>[c.key,c]));
+  }
+  rebuildColorMap();
 
   let events = loadEvents();
   // migrate events saved before sync existed so they carry an updatedAt/deleted flag
@@ -535,7 +705,10 @@
         more.className = "more"; more.textContent = `+${dayEvents.length-3}개 더`;
         btn.appendChild(more);
       }
-      btn.addEventListener("click", ()=>{ selectedDate=dateStr; closeForm(); renderAll(); });
+      btn.addEventListener("click", ()=>{
+        if(clipboard){ pasteToDate(dateStr); return; }
+        selectedDate=dateStr; closeForm(); renderAll();
+      });
       calGrid.appendChild(btn);
     }
   }
@@ -560,12 +733,15 @@
     return placed.map(p=>({...p, totalCols}));
   }
 
-  function renderWeek(){
-    const wkStart = startOfWeek(parseDate(selectedDate));
-    const days = [...Array(7)].map((_,i)=>addDays(wkStart,i));
+  function renderTimeGrid(startDate, numDays){
+    const days = [...Array(numDays)].map((_,i)=>addDays(startDate,i));
 
-    monthLabel.textContent = `${wkStart.getMonth()+1}월`;
-    yearLabel.textContent = String(wkStart.getFullYear());
+    monthLabel.textContent = `${startDate.getMonth()+1}월`;
+    yearLabel.textContent = String(startDate.getFullYear());
+
+    weekHeadDays.style.gridTemplateColumns = `repeat(${numDays},1fr)`;
+    alldayDays.style.gridTemplateColumns = `repeat(${numDays},1fr)`;
+    weekCols.style.gridTemplateColumns = `repeat(${numDays},1fr)`;
 
     weekHeadDays.innerHTML = "";
     alldayDays.innerHTML = "";
@@ -577,8 +753,11 @@
 
       const head = document.createElement("div");
       head.className = "week-head-cell" + (isToday?" today":"") + (isSelected?" selected":"");
-      head.innerHTML = `<div class="wd" style="color:${dow===0?'#D44C47':dow===6?'#337EA9':''}">${WEEKDAY_KO[dow]}</div><div class="wn">${d.getDate()}</div>`;
-      head.addEventListener("click", ()=>{ selectedDate=dateStr; closeForm(); renderAll(); });
+      head.innerHTML = `<div class="wd" style="color:${dow===0?'var(--sun)':dow===6?'var(--sat)':''}">${WEEKDAY_KO[dow]}${numDays===1?" "+(d.getMonth()+1)+"월":""}</div><div class="wn">${d.getDate()}</div>`;
+      head.addEventListener("click", ()=>{
+        if(clipboard){ pasteToDate(dateStr); return; }
+        selectedDate=dateStr; closeForm(); renderAll();
+      });
       weekHeadDays.appendChild(head);
 
       const adCell = document.createElement("div");
@@ -604,7 +783,8 @@
       lab.textContent = `${String(h).padStart(2,"0")}:00`;
       hourLabels.appendChild(lab);
     }
-    const totalHeight = (GRID_END_H - GRID_START_H) * 46;
+    const rowH = 46;
+    const totalHeight = (GRID_END_H - GRID_START_H) * rowH;
 
     weekCols.innerHTML = "";
     weekCols.style.height = totalHeight + "px";
@@ -622,8 +802,8 @@
       const packed = packDayEvents(timed);
       packed.forEach(p=>{
         const c = colorMap[p.ev.color] || colorMap.default;
-        const top = (p.start - GRID_START_H*60) / 60 * 46;
-        const height = Math.max(18, (p.end - p.start) / 60 * 46 - 2);
+        const top = (p.start - GRID_START_H*60) / 60 * rowH;
+        const height = Math.max(18, (p.end - p.start) / 60 * rowH - 2);
         const widthPct = 100 / p.totalCols;
         const block = document.createElement("div");
         block.className = "event-block" + (p.ev.recurrence?" repeat":"") + (p.ev.done?" done":"");
@@ -634,17 +814,166 @@
         block.style.background = c.bg;
         block.style.color = c.text;
         block.innerHTML = `<span class="t">${p.ev.recurrence?"↻ ":""}${escapeHtml(p.ev.title)}</span><span class="r">${timeRangeLabel(p.ev)}</span>`;
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "block-copy-btn";
+        copyBtn.textContent = "⧉";
+        copyBtn.title = "복사";
+        copyBtn.addEventListener("click", (e)=>{ e.stopPropagation(); copyEvent(p.ev); });
+        block.appendChild(copyBtn);
         block.addEventListener("click", (e)=>{ e.stopPropagation(); selectedDate=p.occDate; openForm(p.ev, p.occDate); });
         col.appendChild(block);
       });
 
-      col.addEventListener("click", ()=>{ selectedDate=dateStr; closeForm(); renderAll(); });
+      col.addEventListener("click", (e)=>{
+        if(clipboard){
+          const rect = col.getBoundingClientRect();
+          const offsetY = e.clientY - rect.top;
+          let mins = GRID_START_H*60 + Math.round((offsetY / rowH) * 60 / 15) * 15;
+          mins = Math.max(GRID_START_H*60, Math.min((GRID_END_H-1)*60+45, mins));
+          const h = String(Math.floor(mins/60)).padStart(2,"0");
+          const m = String(mins%60).padStart(2,"0");
+          pasteToDate(dateStr, `${h}:${m}`);
+          return;
+        }
+        selectedDate=dateStr; closeForm(); renderAll();
+      });
       weekCols.appendChild(col);
     });
   }
 
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
+
+  // ================= SKY COLOR (time-of-day gradient) & MOON PHASE =================
+  const SKY_KEYFRAMES = [
+    {h:0,  c:[27,26,58]},
+    {h:3,  c:[43,46,92]},
+    {h:6,  c:[217,138,124]},
+    {h:9,  c:[242,200,143]},
+    {h:12, c:[169,203,224]},
+    {h:15, c:[207,227,240]},
+    {h:18, c:[227,155,107]},
+    {h:21, c:[74,61,107]},
+    {h:24, c:[27,26,58]},
+  ];
+  function skyColorAt(hourFrac){
+    for(let i=0;i<SKY_KEYFRAMES.length-1;i++){
+      const a=SKY_KEYFRAMES[i], b=SKY_KEYFRAMES[i+1];
+      if(hourFrac>=a.h && hourFrac<=b.h){
+        const t=(hourFrac-a.h)/(b.h-a.h);
+        const c=[0,1,2].map(k=>Math.round(a.c[k]+(b.c[k]-a.c[k])*t));
+        return `rgb(${c[0]},${c[1]},${c[2]})`;
+      }
+    }
+    return `rgb(${SKY_KEYFRAMES[0].c.join(",")})`;
+  }
+  function updateSkyTint(){
+    const now = new Date();
+    const hourFrac = now.getHours() + now.getMinutes()/60;
+    document.documentElement.style.setProperty("--sky-color", skyColorAt(hourFrac));
+  }
+  updateSkyTint();
+  setInterval(updateSkyTint, 5*60*1000);
+
+  function moonPhaseFraction(dateObj){
+    const synodic = 29.530588853;
+    const knownNewMoon = Date.UTC(2000,0,6,18,14) / 86400000;
+    const days = dateObj.getTime()/86400000 - knownNewMoon;
+    let phase = (days % synodic) / synodic;
+    if(phase < 0) phase += 1;
+    return phase; // 0 = new moon, 0.5 = full moon
+  }
+
+  // ================= DAY RING (preview) =================
+  const dayRingCard = document.getElementById("dayRingCard");
+  const dayRingSvg = document.getElementById("dayRingSvg");
+  const SVGNS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs){
+    const el = document.createElementNS(SVGNS, tag);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function polarPt(cx,cy,r,angleDeg){
+    const rad = angleDeg * Math.PI/180;
+    return { x: cx + r*Math.sin(rad), y: cy - r*Math.cos(rad) };
+  }
+  function annulusPath(cx,cy,rOuter,rInner,a1,a2){
+    const p1=polarPt(cx,cy,rOuter,a1), p2=polarPt(cx,cy,rOuter,a2);
+    const p3=polarPt(cx,cy,rInner,a2), p4=polarPt(cx,cy,rInner,a1);
+    const large = (a2-a1) > 180 ? 1 : 0;
+    const f = n => n.toFixed(2);
+    return `M${f(p1.x)},${f(p1.y)} A${rOuter},${rOuter} 0 ${large} 1 ${f(p2.x)},${f(p2.y)} `+
+           `L${f(p3.x)},${f(p3.y)} A${rInner},${rInner} 0 ${large} 0 ${f(p4.x)},${f(p4.y)} Z`;
+  }
+
+  function renderDayRing(dateStr){
+    dayRingSvg.innerHTML = "";
+    const cx=130, cy=110, rOuter=95, rInner=72;
+
+    // 48 half-hour wedges, color from the sky-keyframe gradient
+    const SEGMENTS = 48;
+    for(let i=0;i<SEGMENTS;i++){
+      const a1 = i * (360/SEGMENTS);
+      const a2 = (i+1) * (360/SEGMENTS);
+      const hourMid = ((i+0.5) / SEGMENTS) * 24;
+      const wedge = svgEl("path", { d: annulusPath(cx,cy,rOuter,rInner,a1,a2), fill: skyColorAt(hourMid) });
+      dayRingSvg.appendChild(wedge);
+    }
+    dayRingSvg.appendChild(svgEl("circle", {cx,cy,r:rOuter,fill:"none",stroke:"rgba(0,0,0,.12)","stroke-width":0.5}));
+    dayRingSvg.appendChild(svgEl("circle", {cx,cy,r:rInner,fill:"none",stroke:"rgba(0,0,0,.12)","stroke-width":0.5}));
+
+    // moon, fixed in the night arc, shape reflects the actual current phase
+    const moonPt = polarPt(cx,cy,(rOuter+rInner)/2, 15);
+    const phase = moonPhaseFraction(parseDate(dateStr));
+    const mr = 6.5;
+    dayRingSvg.appendChild(svgEl("circle", {cx:moonPt.x, cy:moonPt.y, r:mr+3, fill:"#1B1A3A"}));
+    dayRingSvg.appendChild(svgEl("circle", {cx:moonPt.x, cy:moonPt.y, r:mr, fill:"#F3EEDD"}));
+    const frac = phase<=0.5 ? phase : 1-phase;
+    const dx = frac*4*mr*(phase<0.5 ? -1 : 1);
+    dayRingSvg.appendChild(svgEl("circle", {cx:moonPt.x+dx, cy:moonPt.y, r:mr, fill:"#1B1A3A"}));
+
+    // event arcs
+    const dayEvents = eventsOnDate(dateStr).filter(e=>e.time);
+    dayEvents.forEach(ev=>{
+      const c = colorMap[ev.color] || colorMap.default;
+      const startH = timeToMin(ev.time)/60;
+      const endH = startH + Math.max(ev.duration||30, 20)/60;
+      const a1 = (startH/24)*360, a2 = (endH/24)*360;
+      const arcPath = annulusPath(cx,cy,rOuter+9,rOuter+3,a1,a2);
+      const arc = svgEl("path", {d:arcPath, fill:c.text, class:"ring-event"});
+      arc.addEventListener("click", ()=>{ selectedDate=dateStr; openForm(ev, dateStr); });
+      const t = document.createElementNS(SVGNS,"title");
+      t.textContent = `${formatTime12(ev.time)} ${ev.title}`;
+      arc.appendChild(t);
+      dayRingSvg.appendChild(arc);
+    });
+
+    // "now" marker, only for today
+    if(dateStr === fmtDate(today)){
+      const now = new Date();
+      const nowAngle = ((now.getHours()+now.getMinutes()/60)/24)*360;
+      const p1 = polarPt(cx,cy,rInner-4,nowAngle);
+      const p2 = polarPt(cx,cy,rOuter+14,nowAngle);
+      dayRingSvg.appendChild(svgEl("line", {x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,stroke:"var(--text)","stroke-width":1.5,"stroke-linecap":"round"}));
+      dayRingSvg.appendChild(svgEl("circle", {cx:p2.x,cy:p2.y,r:3,fill:"var(--text)"}));
+    }
+
+    // center hole + labels
+    dayRingSvg.appendChild(svgEl("circle", {cx,cy,r:rInner-3,fill:"var(--bg)"}));
+    const d = parseDate(dateStr);
+    const dateLabel = svgEl("text", {x:cx,y:cy-4,"text-anchor":"middle",fill:"var(--text)","font-size":13,"font-weight":600});
+    dateLabel.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 (${WEEKDAY_KO[d.getDay()]})`;
+    dayRingSvg.appendChild(dateLabel);
+    const metaLabel = svgEl("text", {x:cx,y:cy+14,"text-anchor":"middle",fill:"var(--text-secondary)","font-size":11});
+    if(dateStr === fmtDate(today)){
+      const nowStr = `${String(new Date().getHours()).padStart(2,"0")}:${String(new Date().getMinutes()).padStart(2,"0")}`;
+      metaLabel.textContent = `일정 ${dayEvents.length}개 · ${formatTime12(nowStr)}`;
+    } else {
+      metaLabel.textContent = `일정 ${dayEvents.length}개`;
+    }
+    dayRingSvg.appendChild(metaLabel);
   }
 
   // ================= AGENDA =================
@@ -697,6 +1026,10 @@
 
       const actions = document.createElement("div");
       actions.className = "actions";
+      const copyBtn = document.createElement("button");
+      copyBtn.textContent = "복사";
+      copyBtn.addEventListener("click", ()=>copyEvent(ev));
+      actions.appendChild(copyBtn);
       const editBtn = document.createElement("button");
       editBtn.textContent = "수정";
       editBtn.addEventListener("click", ()=>openForm(ev, selectedDate));
@@ -734,19 +1067,32 @@
   // ================= FORM =================
   const eventForm = document.getElementById("eventForm");
   const fTitle = document.getElementById("fTitle");
-  const fTime = document.getElementById("fTime");
+  const fTimeChip = document.getElementById("fTimeChip");
+  const fEndTimeChip = document.getElementById("fEndTimeChip");
+  const timeChipsWrap = document.getElementById("timeChipsWrap");
   const fAllDay = document.getElementById("fAllDay");
-  const fDuration = document.getElementById("fDuration");
   const fDone = document.getElementById("fDone");
   const fMemo = document.getElementById("fMemo");
   const fUntil = document.getElementById("fUntil");
-  const durationRow = document.getElementById("durationRow");
-  const endPreview = document.getElementById("endPreview");
   const colorPicker = document.getElementById("colorPicker");
   const dayPicker = document.getElementById("dayPicker");
   const repeatDaysRow = document.getElementById("repeatDaysRow");
   const repeatUntilRow = document.getElementById("repeatUntilRow");
   const formNote = document.getElementById("formNote");
+
+  let formStartTime = "09:00";
+  let formEndTime = "09:30";
+
+  function formatTime12(hhmm){
+    const [h,m] = hhmm.split(":").map(Number);
+    const ap = h<12 ? "오전" : "오후";
+    let h12 = h % 12; if(h12===0) h12 = 12;
+    return `${ap} ${h12}:${String(m).padStart(2,"0")}`;
+  }
+  function refreshTimeChips(){
+    fTimeChip.textContent = formatTime12(formStartTime);
+    fEndTimeChip.textContent = formatTime12(formEndTime);
+  }
 
   COLORS.forEach(c=>{
     const opt = document.createElement("span");
@@ -769,24 +1115,27 @@
   });
 
   function updateDurationVisibility(){
-    durationRow.style.display = fAllDay.checked ? "none" : "flex";
-    updateEndPreview();
-  }
-  function updateEndPreview(){
-    if(fAllDay.checked || !fTime.value){ endPreview.textContent=""; return; }
-    const mins = parseInt(fDuration.value,10) || 0;
-    endPreview.textContent = mins ? `→ ${addMinutesToTime(fTime.value, mins)} 종료` : "";
+    timeChipsWrap.style.display = fAllDay.checked ? "none" : "inline-flex";
   }
   fAllDay.addEventListener("change", updateDurationVisibility);
-  fTime.addEventListener("change", updateEndPreview);
-  fDuration.addEventListener("input", updateEndPreview);
-  [...document.querySelectorAll(".dur-chip[data-min]")].forEach(chip=>{
-    chip.addEventListener("click", ()=>{
-      fDuration.value = chip.dataset.min;
-      [...document.querySelectorAll(".dur-chip[data-min]")].forEach(c=>c.classList.toggle("active", c===chip));
-      updateEndPreview();
+
+  fTimeChip.addEventListener("click", ()=>{
+    openTimePicker(fTimeChip, formStartTime, (newVal)=>{
+      formStartTime = newVal;
+      // keep the end time at least 5 minutes after the new start
+      if(timeToMin(formEndTime) <= timeToMin(formStartTime)){
+        formEndTime = addMinutesToTime(formStartTime, 30);
+      }
+      refreshTimeChips();
     });
   });
+  fEndTimeChip.addEventListener("click", ()=>{
+    openTimePicker(fEndTimeChip, formEndTime, (newVal)=>{
+      formEndTime = newVal;
+      refreshTimeChips();
+    });
+  });
+
   [...document.querySelectorAll(".repeat-opt")].forEach(opt=>{
     opt.addEventListener("click", ()=>{
       currentRepeat = opt.dataset.repeat;
@@ -801,13 +1150,13 @@
     editingOccDate = occDate || selectedDate;
     fTitle.value = ev ? ev.title : "";
     fAllDay.checked = ev ? !ev.time : false;
-    fTime.value = ev ? (ev.time || "09:00") : "09:00";
-    fDuration.value = ev && ev.duration ? ev.duration : 30;
+    formStartTime = ev ? (ev.time || "09:00") : "09:00";
+    formEndTime = ev && ev.time ? addMinutesToTime(ev.time, ev.duration || 30) : "09:30";
+    refreshTimeChips();
     fDone.checked = ev ? !!ev.done : false;
     fMemo.value = ev ? (ev.memo||"") : "";
     currentColor = ev ? (ev.color||"default") : "default";
     [...colorPicker.children].forEach(o=>o.classList.toggle("active", o.dataset.color===currentColor));
-    [...document.querySelectorAll(".dur-chip[data-min]")].forEach(c=>c.classList.toggle("active", Number(c.dataset.min)===Number(fDuration.value)));
 
     currentRepeat = ev && ev.recurrence ? "weekly" : "none";
     currentDays = new Set(ev && ev.recurrence ? ev.recurrence.days : [parseDate(editingOccDate).getDay()]);
@@ -841,8 +1190,8 @@
     e.preventDefault();
     const title = fTitle.value.trim();
     if(!title) return;
-    const time = fAllDay.checked ? null : (fTime.value || null);
-    const duration = (time && fDuration.value) ? parseInt(fDuration.value,10) : null;
+    const time = fAllDay.checked ? null : formStartTime;
+    const duration = time ? (((timeToMin(formEndTime) - timeToMin(time) + 1440) % 1440) || 1440) : null;
     const recurrence = (currentRepeat==="weekly" && currentDays.size>0)
       ? { days: [...currentDays].sort(), until: fUntil.value || fmtDate(addDays(parseDate(editingOccDate),42)) }
       : null;
@@ -868,31 +1217,161 @@
     saveEvents(); closeForm(); renderAll(); scheduleSync();
   });
 
+  // ================= TIME PICKER (wheel, Apple-style) =================
+  const timePicker = document.getElementById("timePicker");
+  const timePickerBackdrop = document.getElementById("timePickerBackdrop");
+  const tpHourCol = document.getElementById("tpHourCol");
+  const tpMinuteCol = document.getElementById("tpMinuteCol");
+  const tpAmPm = document.getElementById("tpAmPm");
+  const ITEM_H = 36;
+
+  let tpState = null; // { hour12, minute, ap, onChange }
+
+  function buildWheelItems(col, values, formatFn){
+    col.innerHTML = "";
+    values.forEach(v=>{
+      const item = document.createElement("div");
+      item.className = "tp-item";
+      item.textContent = formatFn(v);
+      item.dataset.value = v;
+      col.appendChild(item);
+    });
+  }
+  const HOURS_12 = [12,1,2,3,4,5,6,7,8,9,10,11]; // wheel order starting at 12 like iOS
+  const MINUTES_5 = [...Array(12)].map((_,i)=>i*5);
+
+  function scrollColTo(col, index, smooth){
+    col.scrollTo({ top: index*ITEM_H, behavior: smooth ? "smooth" : "auto" });
+  }
+  function updateWheelHighlight(col){
+    const centerIndex = Math.round(col.scrollTop / ITEM_H);
+    [...col.children].forEach((item, i)=>{
+      item.classList.remove("tp-center","tp-near");
+      const dist = Math.abs(i - centerIndex);
+      if(dist === 0) item.classList.add("tp-center");
+      else if(dist === 1) item.classList.add("tp-near");
+    });
+    return centerIndex;
+  }
+
+  function attachWheel(col, values, onSettle){
+    let debounce = null;
+    col.addEventListener("scroll", ()=>{
+      updateWheelHighlight(col);
+      clearTimeout(debounce);
+      debounce = setTimeout(()=>{
+        const idx = Math.max(0, Math.min(values.length-1, Math.round(col.scrollTop / ITEM_H)));
+        scrollColTo(col, idx, true);
+        updateWheelHighlight(col);
+        onSettle(values[idx]);
+      }, 120);
+    });
+    [...col.children].forEach((item, i)=>{
+      item.addEventListener("click", ()=>{
+        scrollColTo(col, i, true);
+        setTimeout(()=>{ updateWheelHighlight(col); onSettle(values[i]); }, 240);
+      });
+    });
+  }
+
+  function openTimePicker(anchorEl, initialHHMM, onChange){
+    const [h24, m] = initialHHMM.split(":").map(Number);
+    let ap = h24 < 12 ? "AM" : "PM";
+    let hour12 = h24 % 12; if(hour12 === 0) hour12 = 12;
+    const nearestMin = Math.round(m/5)*5 % 60;
+
+    tpState = { hour12, minute: nearestMin, ap, onChange };
+
+    buildWheelItems(tpHourCol, HOURS_12, v=>String(v));
+    buildWheelItems(tpMinuteCol, MINUTES_5, v=>String(v).padStart(2,"0"));
+    attachWheel(tpHourCol, HOURS_12, v=>{ tpState.hour12 = v; commitTimePicker(); });
+    attachWheel(tpMinuteCol, MINUTES_5, v=>{ tpState.minute = v; commitTimePicker(); });
+
+    const hourIdx = HOURS_12.indexOf(hour12);
+    const minIdx = MINUTES_5.indexOf(nearestMin);
+    scrollColTo(tpHourCol, hourIdx, false);
+    scrollColTo(tpMinuteCol, minIdx, false);
+    updateWheelHighlight(tpHourCol);
+    updateWheelHighlight(tpMinuteCol);
+
+    [...tpAmPm.querySelectorAll(".tp-ampm-btn")].forEach(btn=>{
+      btn.classList.toggle("active", btn.dataset.ap === ap);
+    });
+
+    // position near the anchor, clamped to viewport
+    const rect = anchorEl.getBoundingClientRect();
+    const pickerW = 264, pickerH = 250;
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    if(left + pickerW > window.innerWidth - 8) left = window.innerWidth - pickerW - 8;
+    if(left < 8) left = 8;
+    if(top + pickerH > window.innerHeight - 8) top = rect.top - pickerH - 8;
+    timePicker.style.left = left + "px";
+    timePicker.style.top = top + "px";
+
+    timePickerBackdrop.hidden = false;
+    timePicker.hidden = false;
+    requestAnimationFrame(()=>{
+      timePickerBackdrop.classList.add("open");
+      timePicker.classList.add("open");
+    });
+  }
+  function commitTimePicker(){
+    if(!tpState) return;
+    let h24 = tpState.hour12 % 12;
+    if(tpState.ap === "PM") h24 += 12;
+    const hhmm = `${String(h24).padStart(2,"0")}:${String(tpState.minute).padStart(2,"0")}`;
+    tpState.onChange(hhmm);
+  }
+  function closeTimePicker(){
+    timePickerBackdrop.classList.remove("open");
+    timePicker.classList.remove("open");
+    setTimeout(()=>{ timePickerBackdrop.hidden = true; timePicker.hidden = true; }, 220);
+    tpState = null;
+  }
+  tpAmPm.querySelectorAll(".tp-ampm-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(!tpState) return;
+      tpAmPm.querySelectorAll(".tp-ampm-btn").forEach(b=>b.classList.toggle("active", b===btn));
+      tpState.ap = btn.dataset.ap;
+      commitTimePicker();
+    });
+  });
+  document.getElementById("tpDoneBtn").addEventListener("click", closeTimePicker);
+  document.getElementById("tpCancelBtn").addEventListener("click", closeTimePicker);
+  timePickerBackdrop.addEventListener("click", closeTimePicker);
+
   // ================= NAV & VIEW SWITCH =================
   const monthFrame = document.getElementById("monthFrame");
   const weekFrame = document.getElementById("weekFrame");
   const viewMonthBtn = document.getElementById("viewMonthBtn");
   const viewWeekBtn = document.getElementById("viewWeekBtn");
+  const viewDayBtn = document.getElementById("viewDayBtn");
 
   function setViewMode(mode){
     viewMode = mode;
     monthFrame.style.display = mode==="month" ? "" : "none";
-    weekFrame.style.display = mode==="week" ? "" : "none";
+    weekFrame.style.display = mode==="month" ? "none" : "";
+    dayRingCard.style.display = mode==="day" ? "flex" : "none";
     viewMonthBtn.classList.toggle("active", mode==="month");
     viewWeekBtn.classList.toggle("active", mode==="week");
+    viewDayBtn.classList.toggle("active", mode==="day");
     renderAll();
   }
   viewMonthBtn.addEventListener("click", ()=>setViewMode("month"));
   viewWeekBtn.addEventListener("click", ()=>setViewMode("week"));
+  viewDayBtn.addEventListener("click", ()=>setViewMode("day"));
 
   document.getElementById("prevBtn").addEventListener("click", ()=>{
     if(viewMode==="month"){ viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;} }
-    else{ selectedDate = fmtDate(addDays(parseDate(selectedDate), -7)); }
+    else if(viewMode==="week"){ selectedDate = fmtDate(addDays(parseDate(selectedDate), -7)); }
+    else{ selectedDate = fmtDate(addDays(parseDate(selectedDate), -1)); }
     renderAll();
   });
   document.getElementById("nextBtn").addEventListener("click", ()=>{
     if(viewMode==="month"){ viewMonth++; if(viewMonth>11){viewMonth=0; viewYear++;} }
-    else{ selectedDate = fmtDate(addDays(parseDate(selectedDate), 7)); }
+    else if(viewMode==="week"){ selectedDate = fmtDate(addDays(parseDate(selectedDate), 7)); }
+    else{ selectedDate = fmtDate(addDays(parseDate(selectedDate), 1)); }
     renderAll();
   });
   document.getElementById("todayBtn").addEventListener("click", ()=>{
@@ -901,9 +1380,45 @@
   });
 
   function renderAll(){
-    if(viewMode==="month") renderMonth(); else renderWeek();
+    if(viewMode==="month") renderMonth();
+    else if(viewMode==="week") renderTimeGrid(startOfWeek(parseDate(selectedDate)), 7);
+    else{ renderTimeGrid(parseDate(selectedDate), 1); renderDayRing(selectedDate); }
     renderAgenda();
   }
+
+  // ================= COPY / PASTE (mouse) =================
+  let clipboard = null;
+  const clipBar = document.getElementById("clipBar");
+  const clipBarText = document.getElementById("clipBarText");
+
+  function copyEvent(ev){
+    clipboard = { title: ev.title, time: ev.time, duration: ev.duration, color: ev.color, memo: ev.memo };
+    clipBarText.textContent = `📋 "${ev.title}" 복사됨 — 날짜(또는 주간·일간 뷰에서는 시간대)를 클릭하면 붙여넣기`;
+    clipBar.hidden = false;
+    document.body.classList.add("paste-mode");
+    showToast("복사했습니다");
+  }
+  function pasteToDate(dateStr, overrideTime){
+    if(!clipboard) return;
+    events.push({
+      id:(crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())),
+      date: dateStr,
+      title: clipboard.title,
+      time: overrideTime !== undefined ? overrideTime : clipboard.time,
+      duration: clipboard.duration,
+      done: false, memo: clipboard.memo, color: clipboard.color,
+      recurrence: null, excludeDates: [], deleted:false, updatedAt: Date.now()
+    });
+    saveEvents(); renderAll(); scheduleSync();
+    showToast(`"${clipboard.title}" 붙여넣음`);
+  }
+  function cancelClipboard(){
+    clipboard = null;
+    clipBar.hidden = true;
+    document.body.classList.remove("paste-mode");
+  }
+  document.getElementById("clipCancelBtn").addEventListener("click", cancelClipboard);
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && clipboard) cancelClipboard(); });
 
   // ================= EXPORT / IMPORT =================
   document.getElementById("exportBtn").addEventListener("click", ()=>{
@@ -979,7 +1494,7 @@
     // state: 'off' | 'synced' | 'syncing' | 'error'
     const dot = {off:"○", synced:"●", syncing:"◐", error:"●"}[state] || "○";
     syncBtn.textContent = `${dot} 동기화`;
-    syncBtn.style.color = {off:"var(--text-secondary)", synced:"#448361", syncing:"var(--text-secondary)", error:"#D44C47"}[state] || "";
+    syncBtn.style.color = {off:"var(--text-secondary)", synced:"#5A9178", syncing:"var(--text-secondary)", error:"var(--sun)"}[state] || "";
     if(detail) syncStatusText.textContent = detail;
   }
 
