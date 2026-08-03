@@ -112,7 +112,7 @@
     box-shadow:var(--shadow);
   }
   .day-ring-card svg{max-width:100%;height:auto;cursor:default;}
-  .day-ring-card .ring-event{cursor:pointer;}
+  .day-ring-card .ring-event{cursor:pointer;touch-action:none;}
   .day-ring-card .ring-event:hover{opacity:.75;}
 
   .clip-bar{
@@ -197,6 +197,31 @@
   .event-block .r{font-size:.62rem;opacity:.85;display:block;}
   .event-block.repeat{border-left-style:dashed;}
   .event-block.done{opacity:.55;text-decoration:line-through;}
+  .event-block{touch-action:none;}
+  .event-block.dragging-source{opacity:.32;}
+  .week-col.drag-target{background:var(--accent-bg);}
+  .drag-time-line{
+    position:absolute;left:2px;right:2px;height:0;border-top:2px solid var(--accent);
+    pointer-events:none;z-index:5;font-size:.62rem;color:var(--accent);font-weight:600;
+    padding-top:2px;
+  }
+  .drag-ghost{
+    position:fixed;z-index:200;pointer-events:none;
+    padding:5px 10px;border-radius:7px;font-size:.76rem;font-weight:600;
+    box-shadow:var(--shadow);white-space:nowrap;transform:rotate(-1.5deg);
+  }
+  .ctx-menu{
+    position:fixed;z-index:120;min-width:140px;
+    background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:1px;
+  }
+  .ctx-menu button{
+    border:none;background:transparent;color:var(--text);text-align:left;
+    padding:8px 10px;border-radius:var(--radius);font-size:.85rem;cursor:pointer;
+  }
+  .ctx-menu button:hover{background:var(--bg-hover);}
+  .ctx-menu button.danger{color:var(--sun);}
+  .ctx-menu button.danger:hover{background:color-mix(in srgb, var(--sun) 12%, var(--bg));}
   .event-block .block-copy-btn{
     position:absolute;top:1px;right:1px;
     width:16px;height:16px;border-radius:4px;border:none;
@@ -449,7 +474,7 @@
   </div>
 
   <div class="day-ring-card" id="dayRingCard" style="display:none;">
-    <svg id="dayRingSvg" viewBox="0 0 260 220" width="260" height="220"></svg>
+    <svg id="dayRingSvg" viewBox="0 0 300 300" width="300" height="300"></svg>
   </div>
 
   <div class="agenda" id="agenda">
@@ -521,6 +546,8 @@
   </div>
 
 </div>
+
+<div class="ctx-menu" id="ctxMenu" hidden></div>
 
 <div class="time-picker-backdrop" id="timePickerBackdrop" hidden></div>
 <div class="time-picker" id="timePicker" hidden>
@@ -697,6 +724,7 @@
         chip.className = "chip" + (ev.done ? " done" : "") + (ev.recurrence ? " repeat" : "");
         if(!ev.done){ chip.style.background = c.bg; chip.style.color = c.text; }
         chip.textContent = (ev.recurrence ? "↻ " : "") + (ev.time? ev.time+" ":"") + ev.title;
+        chip.addEventListener("contextmenu", (e)=>{ e.preventDefault(); e.stopPropagation(); openContextMenu(e.clientX, e.clientY, ev, dateStr); });
         chips.appendChild(chip);
       });
       btn.appendChild(chips);
@@ -793,6 +821,7 @@
       const col = document.createElement("div");
       col.className = "week-col";
       col.style.height = totalHeight + "px";
+      col.dataset.date = dateStr;
 
       const timed = eventsOnDate(dateStr).filter(e=>e.time).map(ev=>{
         const start = Math.max(timeToMin(ev.time), GRID_START_H*60);
@@ -821,7 +850,7 @@
         copyBtn.title = "복사";
         copyBtn.addEventListener("click", (e)=>{ e.stopPropagation(); copyEvent(p.ev); });
         block.appendChild(copyBtn);
-        block.addEventListener("click", (e)=>{ e.stopPropagation(); selectedDate=p.occDate; openForm(p.ev, p.occDate); });
+        attachBlockInteractions(block, p.ev, p.occDate, rowH);
         col.appendChild(block);
       });
 
@@ -841,6 +870,278 @@
       weekCols.appendChild(col);
     });
   }
+
+  // ================= BLOCK INTERACTIONS: click / drag-to-move / right-click menu =================
+  let dragState = null;
+  let dragGhost = null;
+
+  function snapMinutes(clientY, colRect, rowHpx){
+    const offsetY = clientY - colRect.top;
+    let mins = GRID_START_H*60 + Math.round((offsetY / rowHpx) * 60 / 15) * 15;
+    return Math.max(GRID_START_H*60, Math.min((GRID_END_H-1)*60+45, mins));
+  }
+  function minsToHHMM(mins){
+    return `${String(Math.floor(mins/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`;
+  }
+
+  function attachBlockInteractions(block, ev, occDate, rowHpx){
+    let pressTimer = null, armed = false, startX=0, startY=0, moved=false, rawMoved=false;
+
+    function endInteraction(commit, clientX, clientY){
+      clearTimeout(pressTimer);
+      block.classList.remove("dragging-source");
+      document.querySelectorAll(".week-col.drag-target").forEach(c=>c.classList.remove("drag-target"));
+      const line = document.getElementById("dragTimeLine");
+      if(line) line.remove();
+      if(dragGhost){ dragGhost.remove(); dragGhost = null; }
+
+      if(armed && moved && commit){
+        const targetEl = document.elementFromPoint(clientX, clientY);
+        const targetCol = targetEl && targetEl.closest ? targetEl.closest(".week-col") : null;
+        if(targetCol){
+          const targetDate = targetCol.dataset.date;
+          const mins = snapMinutes(clientY, targetCol.getBoundingClientRect(), rowHpx);
+          const newTime = minsToHHMM(mins);
+          if(ev.recurrence){
+            ev.excludeDates = ev.excludeDates || [];
+            ev.excludeDates.push(occDate);
+            ev.updatedAt = Date.now();
+            events.push({
+              id:(crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())),
+              date: targetDate, title: ev.title, time: newTime, duration: ev.duration,
+              done:false, memo: ev.memo, color: ev.color, recurrence:null, excludeDates:[], deleted:false, updatedAt: Date.now()
+            });
+            showToast("이 날짜만 이동했어요 (반복은 유지)");
+          }else{
+            ev.date = targetDate; ev.time = newTime; ev.updatedAt = Date.now();
+            showToast("일정을 이동했어요");
+          }
+          saveEvents(); renderAll(); scheduleSync();
+        }
+      } else if(!rawMoved){
+        selectedDate = occDate; openForm(ev, occDate);
+      }
+      armed = false; moved = false; rawMoved = false;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    }
+
+    function onMove(e){
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if(Math.hypot(dx,dy) > 6) rawMoved = true;
+      if(!armed){
+        if(rawMoved) clearTimeout(pressTimer);
+        return;
+      }
+      if(Math.hypot(dx,dy) > 3) moved = true;
+      if(!moved) return;
+      if(!dragGhost){
+        dragGhost = document.createElement("div");
+        dragGhost.className = "drag-ghost";
+        dragGhost.textContent = ev.title;
+        const c = colorMap[ev.color] || colorMap.default;
+        dragGhost.style.background = c.bg; dragGhost.style.color = c.text;
+        document.body.appendChild(dragGhost);
+        block.classList.add("dragging-source");
+      }
+      dragGhost.style.left = (e.clientX + 14) + "px";
+      dragGhost.style.top = (e.clientY + 14) + "px";
+
+      document.querySelectorAll(".week-col.drag-target").forEach(c=>c.classList.remove("drag-target"));
+      const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+      const targetCol = targetEl && targetEl.closest ? targetEl.closest(".week-col") : null;
+      let line = document.getElementById("dragTimeLine");
+      if(targetCol){
+        targetCol.classList.add("drag-target");
+        const rect = targetCol.getBoundingClientRect();
+        const mins = snapMinutes(e.clientY, rect, rowHpx);
+        if(!line){
+          line = document.createElement("div");
+          line.id = "dragTimeLine";
+          line.className = "drag-time-line";
+          targetCol.appendChild(line);
+        } else if(line.parentElement !== targetCol){
+          targetCol.appendChild(line);
+        }
+        line.style.top = ((mins - GRID_START_H*60)/60*rowHpx) + "px";
+        line.textContent = minsToHHMM(mins);
+      } else if(line){
+        line.remove();
+      }
+    }
+    function onUp(e){ endInteraction(true, e.clientX, e.clientY); }
+    function onCancel(){ endInteraction(false, 0, 0); }
+
+    block.addEventListener("pointerdown", (e)=>{
+      if(e.target.closest(".block-copy-btn")) return;
+      if(e.button !== undefined && e.button !== 0 && e.pointerType==="mouse") return;
+      e.stopPropagation();
+      startX = e.clientX; startY = e.clientY; moved = false; rawMoved = false;
+      const isTouch = e.pointerType === "touch";
+      armed = !isTouch; // mouse arms immediately on movement; touch waits for a hold
+      if(isTouch){
+        pressTimer = setTimeout(()=>{ armed = true; }, 300);
+      }
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onCancel);
+    });
+
+    block.addEventListener("contextmenu", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      openContextMenu(e.clientX, e.clientY, ev, occDate);
+    });
+  }
+
+  // ---- right-click quick menu ----
+  const ctxMenu = document.getElementById("ctxMenu");
+  function openContextMenu(x, y, ev, occDate){
+    ctxMenu.innerHTML = "";
+    const mk = (label, fn, danger)=>{
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = label;
+      if(danger) b.className = "danger";
+      b.addEventListener("click", ()=>{ closeContextMenu(); fn(); });
+      ctxMenu.appendChild(b);
+    };
+    mk("수정", ()=>{ selectedDate=occDate; openForm(ev, occDate); });
+    mk("복사", ()=>copyEvent(ev));
+    if(ev.recurrence){
+      mk("이 날짜만 삭제", ()=>{
+        ev.excludeDates = ev.excludeDates || [];
+        ev.excludeDates.push(occDate);
+        ev.updatedAt = Date.now();
+        saveEvents(); renderAll(); scheduleSync(); showToast("이 날짜 일정만 삭제했습니다");
+      });
+      mk("전체 삭제", ()=>{
+        if(confirm(`"${ev.title}" 반복 일정 전체를 삭제할까요?`)){
+          ev.deleted = true; ev.updatedAt = Date.now();
+          saveEvents(); renderAll(); scheduleSync(); showToast("삭제했습니다");
+        }
+      }, true);
+    }else{
+      mk("삭제", ()=>{
+        if(confirm(`"${ev.title}" 일정을 삭제할까요?`)){
+          ev.deleted = true; ev.updatedAt = Date.now();
+          saveEvents(); renderAll(); scheduleSync(); showToast("삭제했습니다");
+        }
+      }, true);
+    }
+    ctxMenu.hidden = false;
+    const menuW = 150;
+    let left = x, top = y;
+    if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+    if(top + ctxMenu.offsetHeight > window.innerHeight - 8) top = window.innerHeight - ctxMenu.offsetHeight - 8;
+    ctxMenu.style.left = left + "px";
+    ctxMenu.style.top = top + "px";
+  }
+  function closeContextMenu(){ ctxMenu.hidden = true; }
+  document.addEventListener("click", closeContextMenu);
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeContextMenu(); });
+
+  // ================= RING EVENT DRAG (radial retime) =================
+  function screenToSvgPoint(svg, clientX, clientY){
+    const pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if(!ctm) return {x:clientX, y:clientY};
+    const p = pt.matrixTransform(ctm.inverse());
+    return {x:p.x, y:p.y};
+  }
+  function angleFromCenter(px,py,cx,cy){
+    let angle = Math.atan2(px-cx, -(py-cy)) * 180/Math.PI;
+    if(angle < 0) angle += 360;
+    return angle;
+  }
+  function shortestAngleDelta(a,b){
+    return ((b - a + 540) % 360) - 180;
+  }
+
+  function attachRingEventInteractions(arcEl, ev, dateStr, bandInner, bandOuter){
+    let pressTimer=null, armed=false, moved=false, rawMoved=false;
+    let startClientX=0, startClientY=0, startAngle=0, startMin=0;
+    const duration = Math.max(ev.duration||30, 20);
+    let ringGhost = null;
+
+    function reset(){
+      clearTimeout(pressTimer);
+      armed=false; moved=false; rawMoved=false;
+      if(ringGhost){ ringGhost.remove(); ringGhost=null; }
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    }
+
+    function currentAngle(clientX, clientY){
+      const p = screenToSvgPoint(dayRingSvg, clientX, clientY);
+      return angleFromCenter(p.x, p.y, RING_CX, RING_CY);
+    }
+
+    function onMove(e){
+      const dxpx = e.clientX-startClientX, dypx = e.clientY-startClientY;
+      if(Math.hypot(dxpx,dypx) > 6) rawMoved = true;
+      if(!armed){ if(rawMoved) clearTimeout(pressTimer); return; }
+      const ang = currentAngle(e.clientX, e.clientY);
+      const deltaAngle = shortestAngleDelta(startAngle, ang);
+      if(Math.abs(deltaAngle) > 1.5) moved = true;
+      if(!moved) return;
+
+      const deltaMin = Math.round((deltaAngle/360*1440)/15)*15;
+      let newStart = Math.max(0, Math.min(1440-duration, startMin + deltaMin));
+      const newTime = minsToHHMM(newStart);
+
+      if(!ringGhost){
+        ringGhost = document.createElement("div");
+        ringGhost.className = "drag-ghost";
+        const c = colorMap[ev.color] || colorMap.default;
+        ringGhost.style.background = c.bg; ringGhost.style.color = c.text;
+        document.body.appendChild(ringGhost);
+      }
+      ringGhost.textContent = `${formatTime12(newTime)} · ${ev.title}`;
+      ringGhost.style.left = (e.clientX + 14) + "px";
+      ringGhost.style.top = (e.clientY + 14) + "px";
+
+      const a1 = (newStart/1440)*360, a2 = ((newStart+duration)/1440)*360;
+      arcEl.setAttribute("d", annulusPath(RING_CX,RING_CY,bandOuter,bandInner,a1,a2));
+      arcEl.dataset.pendingTime = newTime;
+    }
+    function onUp(){
+      if(armed && moved){
+        const newTime = arcEl.dataset.pendingTime;
+        if(newTime && newTime !== ev.time){
+          ev.time = newTime; ev.updatedAt = Date.now();
+          saveEvents(); scheduleSync();
+          showToast("시간을 옮겼어요");
+        }
+        renderAll();
+      } else if(!rawMoved){
+        selectedDate = dateStr; openForm(ev, dateStr);
+      }
+      reset();
+    }
+    function onCancel(){ renderAll(); reset(); }
+
+    arcEl.addEventListener("pointerdown", (e)=>{
+      e.stopPropagation();
+      startClientX = e.clientX; startClientY = e.clientY;
+      startAngle = currentAngle(e.clientX, e.clientY);
+      startMin = timeToMin(ev.time);
+      moved=false; rawMoved=false;
+      const isTouch = e.pointerType === "touch";
+      armed = !isTouch;
+      if(isTouch) pressTimer = setTimeout(()=>{ armed = true; }, 300);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onCancel);
+    });
+    arcEl.addEventListener("contextmenu", (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      openContextMenu(e.clientX, e.clientY, ev, dateStr);
+    });
+  }
+
+
 
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -908,9 +1209,12 @@
            `L${f(p3.x)},${f(p3.y)} A${rInner},${rInner} 0 ${large} 0 ${f(p4.x)},${f(p4.y)} Z`;
   }
 
+  const RING_CX=150, RING_CY=150, RING_R_OUTER=95, RING_R_INNER=72;
+  const RING_LAYER_THICK=7, RING_LAYER_GAP=1.5, RING_MAX_LAYERS=6;
+
   function renderDayRing(dateStr){
     dayRingSvg.innerHTML = "";
-    const cx=130, cy=110, rOuter=95, rInner=72;
+    const cx=RING_CX, cy=RING_CY, rOuter=RING_R_OUTER, rInner=RING_R_INNER;
 
     // 48 half-hour wedges, color from the sky-keyframe gradient
     const SEGMENTS = 48;
@@ -934,28 +1238,38 @@
     const dx = frac*4*mr*(phase<0.5 ? -1 : 1);
     dayRingSvg.appendChild(svgEl("circle", {cx:moonPt.x+dx, cy:moonPt.y, r:mr, fill:"#1B1A3A"}));
 
-    // event arcs
+    // event arcs — overlapping events stack as concentric rings outward, like baumkuchen layers
     const dayEvents = eventsOnDate(dateStr).filter(e=>e.time);
-    dayEvents.forEach(ev=>{
+    const timed = dayEvents.map(ev=>{
+      const start = timeToMin(ev.time);
+      const end = start + Math.max(ev.duration||30, 20);
+      return { ev, start, end };
+    });
+    const packed = packDayEvents(timed);
+    const maxLayer = packed.length ? Math.min(RING_MAX_LAYERS-1, Math.max(...packed.map(p=>p.col))) : 0;
+    packed.forEach(p=>{
+      const ev = p.ev;
       const c = colorMap[ev.color] || colorMap.default;
-      const startH = timeToMin(ev.time)/60;
-      const endH = startH + Math.max(ev.duration||30, 20)/60;
-      const a1 = (startH/24)*360, a2 = (endH/24)*360;
-      const arcPath = annulusPath(cx,cy,rOuter+9,rOuter+3,a1,a2);
+      const layer = Math.min(p.col, RING_MAX_LAYERS-1);
+      const bandInner = rOuter + 3 + layer*(RING_LAYER_THICK+RING_LAYER_GAP);
+      const bandOuter = bandInner + RING_LAYER_THICK;
+      const a1 = (p.start/1440)*360, a2 = (p.end/1440)*360;
+      const arcPath = annulusPath(cx,cy,bandOuter,bandInner,a1,a2);
       const arc = svgEl("path", {d:arcPath, fill:c.text, class:"ring-event"});
-      arc.addEventListener("click", ()=>{ selectedDate=dateStr; openForm(ev, dateStr); });
+      attachRingEventInteractions(arc, ev, dateStr, bandInner, bandOuter);
       const t = document.createElementNS(SVGNS,"title");
       t.textContent = `${formatTime12(ev.time)} ${ev.title}`;
       arc.appendChild(t);
       dayRingSvg.appendChild(arc);
     });
 
-    // "now" marker, only for today
+    // "now" marker, only for today — reaches past the outermost occupied layer
     if(dateStr === fmtDate(today)){
       const now = new Date();
       const nowAngle = ((now.getHours()+now.getMinutes()/60)/24)*360;
+      const nowOuter = rOuter + 3 + (maxLayer+1)*(RING_LAYER_THICK+RING_LAYER_GAP) + 5;
       const p1 = polarPt(cx,cy,rInner-4,nowAngle);
-      const p2 = polarPt(cx,cy,rOuter+14,nowAngle);
+      const p2 = polarPt(cx,cy,nowOuter,nowAngle);
       dayRingSvg.appendChild(svgEl("line", {x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,stroke:"var(--text)","stroke-width":1.5,"stroke-linecap":"round"}));
       dayRingSvg.appendChild(svgEl("circle", {cx:p2.x,cy:p2.y,r:3,fill:"var(--text)"}));
     }
