@@ -124,17 +124,6 @@
   .day-ring-card .ring-event{cursor:pointer;touch-action:none;}
   .day-ring-card .ring-event:hover{opacity:.75;}
 
-  .clip-bar{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:var(--accent-bg);border:1px solid var(--accent);border-radius:var(--radius);
-    padding:8px 12px;margin-bottom:14px;font-size:.85rem;color:var(--text);
-  }
-  body.paste-mode .day:hover,
-  body.paste-mode .week-col:hover,
-  body.paste-mode .week-head-cell:hover{
-    outline:2px dashed var(--accent);outline-offset:-2px;cursor:copy;
-  }
-
   /* ---- Month grid ---- */
   .cal-frame{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
   .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);background:#FBFBFA;}
@@ -467,7 +456,6 @@
     background:color-mix(in srgb,var(--bg) 40%,white);box-shadow:var(--shadow);
   }
   body.theme-dark .form#syncPanel{background:var(--bg-hover);}
-  .clip-bar{margin:0 0 18px;border-color:color-mix(in srgb,var(--accent) 34%,var(--border));padding:10px 14px;}
   .workspace{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start;}
   .calendar-panel,.agenda{
     margin:0;background:color-mix(in srgb,var(--bg) 25%,white);border:1px solid var(--border);
@@ -514,6 +502,16 @@
   .footer-bar{margin:18px 4px 0;text-align:center;}
   .hint{font-size:.72rem;line-height:1.65;}
   .toast{border-radius:999px;padding:10px 18px;}
+  body.zen-mode .toolbar,body.zen-mode .footer-bar,body.zen-mode #syncPanel{display:none !important;}
+  body.zen-mode .workspace{grid-template-columns:minmax(0,1fr) 350px;}
+  body.zen-mode .calendar-panel{min-height:620px;display:flex;flex-direction:column;}
+  body.zen-mode .day-ring-card{
+    flex:1;min-height:500px;margin:0;border:0;box-shadow:none;
+    background:radial-gradient(circle at center,color-mix(in srgb,var(--accent-bg) 62%,transparent),transparent 58%);
+    align-items:center;
+  }
+  body.zen-mode .day-ring-card svg{width:min(100%,440px);filter:saturate(.64) contrast(.96);}
+  body.zen-mode .agenda-kicker::after{content:" · quiet view";color:var(--text-secondary);font-weight:500;}
 
   @media (max-width:980px){
     .workspace{grid-template-columns:minmax(0,1fr) 280px;}
@@ -533,6 +531,8 @@
     .brand-sub{display:none;}
     #syncBtn{font-size:0;width:36px;padding:0;}
     #syncBtn::first-letter{font-size:.8rem;}
+    body.zen-mode .calendar-panel{min-height:auto;}
+    body.zen-mode .day-ring-card{min-height:380px;}
   }
   @media (max-width:430px){
     .toolbar{gap:2px;}
@@ -588,11 +588,6 @@
     </div>
   </div>
 
-  <div class="clip-bar" id="clipBar" hidden>
-    <span id="clipBarText">📋 복사됨</span>
-    <button type="button" class="btn small ghost" id="clipCancelBtn">취소</button>
-  </div>
-
   <main class="workspace">
   <section class="calendar-panel" aria-label="달력">
   <div class="month-nav">
@@ -610,6 +605,7 @@
     <button class="btn small active" id="viewMonthBtn">월간</button>
     <button class="btn small" id="viewWeekBtn">주간</button>
     <button class="btn small" id="viewDayBtn">일간</button>
+    <button class="btn small" id="viewZenBtn" title="하루의 리듬에만 집중하는 보기">고요</button>
   </div>
 
   <div class="cal-frame" id="monthFrame">
@@ -744,7 +740,8 @@
 
   const STORAGE_KEY = "notion-calendar-events-v2";
   const WEEKDAY_KO = ["일","월","화","수","목","금","토"];
-  const GRID_START_H = 7, GRID_END_H = 23; // week view visible hour range
+  // The end is exclusive: 24 renders rows and labels through 23:00.
+  const GRID_START_H = 7, GRID_END_H = 24;
 
   // ---- theme ----
   const THEME_KEY = "calendar-theme"; // 'light' | 'dark'
@@ -902,8 +899,12 @@
         btn.appendChild(more);
       }
       btn.addEventListener("click", ()=>{
-        if(clipboard){ pasteToDate(dateStr); return; }
         selectedDate=dateStr; closeForm(); renderAll();
+      });
+      btn.addEventListener("contextmenu", (e)=>{
+        if(!clipboard || e.target.closest(".chip")) return;
+        e.preventDefault();
+        openPasteMenu(e.clientX, e.clientY, dateStr);
       });
       calGrid.appendChild(btn);
     }
@@ -951,8 +952,12 @@
       head.className = "week-head-cell" + (isToday?" today":"") + (isSelected?" selected":"");
       head.innerHTML = `<div class="wd" style="color:${dow===0?'var(--sun)':dow===6?'var(--sat)':''}">${WEEKDAY_KO[dow]}${numDays===1?" "+(d.getMonth()+1)+"월":""}</div><div class="wn">${d.getDate()}</div>`;
       head.addEventListener("click", ()=>{
-        if(clipboard){ pasteToDate(dateStr); return; }
         selectedDate=dateStr; closeForm(); renderAll();
+      });
+      head.addEventListener("contextmenu", (e)=>{
+        if(!clipboard) return;
+        e.preventDefault();
+        openPasteMenu(e.clientX, e.clientY, dateStr);
       });
       weekHeadDays.appendChild(head);
 
@@ -967,6 +972,11 @@
         chip.style.cursor = "pointer";
         chip.addEventListener("click", (e)=>{ e.stopPropagation(); selectedDate=dateStr; openForm(ev, dateStr); });
         adCell.appendChild(chip);
+      });
+      adCell.addEventListener("contextmenu", (e)=>{
+        if(!clipboard || e.target.closest(".chip")) return;
+        e.preventDefault();
+        openPasteMenu(e.clientX, e.clientY, dateStr, "");
       });
       alldayDays.appendChild(adCell);
     });
@@ -1000,7 +1010,8 @@
       packed.forEach(p=>{
         const c = colorMap[p.ev.color] || colorMap.default;
         const top = (p.start - GRID_START_H*60) / 60 * rowH;
-        const height = Math.max(18, (p.end - p.start) / 60 * rowH - 2);
+        const naturalHeight = Math.max(18, (p.end - p.start) / 60 * rowH - 2);
+        const height = Math.max(2, Math.min(naturalHeight, totalHeight - top - 1));
         const widthPct = 100 / p.totalCols;
         const block = document.createElement("div");
         block.className = "event-block" + (p.ev.recurrence?" repeat":"") + (p.ev.done?" done":"");
@@ -1023,17 +1034,13 @@
       });
 
       col.addEventListener("click", (e)=>{
-        if(clipboard){
-          const rect = col.getBoundingClientRect();
-          const offsetY = e.clientY - rect.top;
-          let mins = GRID_START_H*60 + Math.round((offsetY / rowH) * 60 / 15) * 15;
-          mins = Math.max(GRID_START_H*60, Math.min((GRID_END_H-1)*60+45, mins));
-          const h = String(Math.floor(mins/60)).padStart(2,"0");
-          const m = String(mins%60).padStart(2,"0");
-          pasteToDate(dateStr, `${h}:${m}`);
-          return;
-        }
         selectedDate=dateStr; closeForm(); renderAll();
+      });
+      col.addEventListener("contextmenu", (e)=>{
+        if(!clipboard || e.target.closest(".event-block")) return;
+        e.preventDefault();
+        const mins = snapMinutes(e.clientY, col.getBoundingClientRect(), rowH);
+        openPasteMenu(e.clientX, e.clientY, dateStr, minsToHHMM(mins));
       });
       weekCols.appendChild(col);
     });
@@ -1164,6 +1171,16 @@
 
   // ---- right-click quick menu ----
   const ctxMenu = document.getElementById("ctxMenu");
+  function showContextMenuAt(x, y, width=176){
+    ctxMenu.hidden = false;
+    const menuW = width;
+    ctxMenu.style.width = menuW + "px";
+    let left = x, top = y;
+    if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+    if(top + ctxMenu.offsetHeight > window.innerHeight - 8) top = window.innerHeight - ctxMenu.offsetHeight - 8;
+    ctxMenu.style.left = Math.max(8,left) + "px";
+    ctxMenu.style.top = Math.max(8,top) + "px";
+  }
   function openContextMenu(x, y, ev, occDate){
     ctxMenu.innerHTML = "";
     const mk = (label, fn, danger)=>{
@@ -1196,13 +1213,29 @@
         }
       }, true);
     }
-    ctxMenu.hidden = false;
-    const menuW = 150;
-    let left = x, top = y;
-    if(left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
-    if(top + ctxMenu.offsetHeight > window.innerHeight - 8) top = window.innerHeight - ctxMenu.offsetHeight - 8;
-    ctxMenu.style.left = left + "px";
-    ctxMenu.style.top = top + "px";
+    showContextMenuAt(x, y);
+  }
+  function openPasteMenu(x, y, dateStr, overrideTime){
+    if(!clipboard) return;
+    const copiedTitle = clipboard.title;
+    ctxMenu.innerHTML = "";
+    const pasteBtn = document.createElement("button");
+    pasteBtn.type = "button";
+    pasteBtn.textContent = `“${copiedTitle}” 붙여넣기`;
+    pasteBtn.addEventListener("click", ()=>{
+      closeContextMenu();
+      pasteToDate(dateStr, overrideTime);
+    });
+    ctxMenu.appendChild(pasteBtn);
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.textContent = "복사 취소";
+    cancelBtn.addEventListener("click", ()=>{
+      closeContextMenu();
+      cancelClipboard();
+    });
+    ctxMenu.appendChild(cancelBtn);
+    showContextMenuAt(x, y, 220);
   }
   function closeContextMenu(){ ctxMenu.hidden = true; }
   document.addEventListener("click", closeContextMenu);
@@ -1829,20 +1862,24 @@
   const viewMonthBtn = document.getElementById("viewMonthBtn");
   const viewWeekBtn = document.getElementById("viewWeekBtn");
   const viewDayBtn = document.getElementById("viewDayBtn");
+  const viewZenBtn = document.getElementById("viewZenBtn");
 
   function setViewMode(mode){
     viewMode = mode;
+    document.body.classList.toggle("zen-mode", mode==="zen");
     monthFrame.style.display = mode==="month" ? "" : "none";
-    weekFrame.style.display = mode==="month" ? "none" : "";
-    dayRingCard.style.display = mode==="day" ? "flex" : "none";
+    weekFrame.style.display = (mode==="week" || mode==="day") ? "" : "none";
+    dayRingCard.style.display = (mode==="day" || mode==="zen") ? "flex" : "none";
     viewMonthBtn.classList.toggle("active", mode==="month");
     viewWeekBtn.classList.toggle("active", mode==="week");
     viewDayBtn.classList.toggle("active", mode==="day");
+    viewZenBtn.classList.toggle("active", mode==="zen");
     renderAll();
   }
   viewMonthBtn.addEventListener("click", ()=>setViewMode("month"));
   viewWeekBtn.addEventListener("click", ()=>setViewMode("week"));
   viewDayBtn.addEventListener("click", ()=>setViewMode("day"));
+  viewZenBtn.addEventListener("click", ()=>setViewMode("zen"));
 
   document.getElementById("prevBtn").addEventListener("click", ()=>{
     if(viewMode==="month"){ viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;} }
@@ -1864,42 +1901,55 @@
   function renderAll(){
     if(viewMode==="month") renderMonth();
     else if(viewMode==="week") renderTimeGrid(startOfWeek(parseDate(selectedDate)), 7);
-    else{ renderTimeGrid(parseDate(selectedDate), 1); renderDayRing(selectedDate); }
+    else if(viewMode==="day"){ renderTimeGrid(parseDate(selectedDate), 1); renderDayRing(selectedDate); }
+    else{
+      const d = parseDate(selectedDate);
+      monthLabel.textContent = `${d.getMonth()+1}월`;
+      yearLabel.textContent = String(d.getFullYear());
+      renderDayRing(selectedDate);
+    }
     renderAgenda();
   }
 
   // ================= COPY / PASTE (mouse) =================
   let clipboard = null;
-  const clipBar = document.getElementById("clipBar");
-  const clipBarText = document.getElementById("clipBarText");
 
   function copyEvent(ev){
-    clipboard = { title: ev.title, time: ev.time, duration: ev.duration, color: ev.color, memo: ev.memo };
-    clipBarText.textContent = `📋 "${ev.title}" 복사됨 — 날짜(또는 주간·일간 뷰에서는 시간대)를 클릭하면 붙여넣기`;
-    clipBar.hidden = false;
-    document.body.classList.add("paste-mode");
-    showToast("복사했습니다");
+    clipboard = {
+      title: ev.title,
+      time: ev.time || "",
+      duration: Number.isFinite(ev.duration) ? ev.duration : 0,
+      color: ev.color || "default",
+      memo: ev.memo || ""
+    };
+    showToast("복사했습니다 · 날짜나 시간대를 길게 누르세요");
   }
   function pasteToDate(dateStr, overrideTime){
     if(!clipboard) return;
-    events.push({
-      id:(crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random())),
-      date: dateStr,
-      title: clipboard.title,
-      time: overrideTime !== undefined ? overrideTime : clipboard.time,
-      duration: clipboard.duration,
-      done: false, memo: clipboard.memo, color: clipboard.color,
-      recurrence: null, excludeDates: [], deleted:false, updatedAt: Date.now()
-    });
-    saveEvents(); renderAll(); scheduleSync();
-    showToast(`"${clipboard.title}" 붙여넣음`);
+    // Apple Calendar-like flow: prepare a new event from the copied values,
+    // then let the user review it before it is actually saved.
+    const copied = {...clipboard};
+    cancelClipboard();
+    selectedDate = dateStr;
+    renderAll();
+    openForm(null, dateStr);
+    fTitle.value = copied.title;
+    const pastedTime = overrideTime !== undefined ? overrideTime : copied.time;
+    fAllDay.checked = !pastedTime;
+    formStartTime = pastedTime || "09:00";
+    formEndTime = addMinutesToTime(formStartTime, copied.duration || 30);
+    fMemo.value = copied.memo;
+    currentColor = copied.color;
+    [...colorPicker.children].forEach(o=>o.classList.toggle("active", o.dataset.color===currentColor));
+    updateDurationVisibility();
+    refreshTimeChips();
+    formNote.hidden = false;
+    formNote.textContent = "복사한 일정입니다. 내용을 확인한 뒤 저장하세요.";
+    showToast("복사한 일정을 확인하세요");
   }
   function cancelClipboard(){
     clipboard = null;
-    clipBar.hidden = true;
-    document.body.classList.remove("paste-mode");
   }
-  document.getElementById("clipCancelBtn").addEventListener("click", cancelClipboard);
   document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && clipboard) cancelClipboard(); });
 
   // ================= EXPORT / IMPORT =================
